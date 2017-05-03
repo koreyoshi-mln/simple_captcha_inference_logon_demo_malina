@@ -48,7 +48,13 @@ def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
         load_logon_page(driver)
         time.sleep(asyn_time)
 
-        elem_cardid = driver.find_elements_by_id('code')[0]
+        while True:
+            try:
+                elem_cardid = driver.find_elements_by_id('code')[0]
+            except:
+                time.sleep(asyn_time)
+            else:
+                break
         elem_cardid.clear()
         elem_cardid.send_keys(card_id)
 
