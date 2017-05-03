@@ -16,8 +16,8 @@ def cli():
 
     username = arguments['<username>']
     passwd = arguments['<password>']
-    asyn_time = arguments['--asyn-time']
-    selenium_logon(username, passwd)
+    asyn_time = float(arguments['--asyn-time'])
+    selenium_logon(username, passwd, asyn_time=asyn_time)
 
 if __name__ == '__main__':
     cli()

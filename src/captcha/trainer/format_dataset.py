@@ -29,7 +29,7 @@ def load_dataset():
     base_dir = os.path.join(trainer_dir, "training_set")
     index = 0
     for label in os.listdir(base_dir):
-        if label == "ERROR" or label == ".DS_Store":
+        if label.upper() == "ERROR" or label == ".DS_Store":
             continue
         if label.startswith('_'): # Windows case insensitive, exp:
                                   # use dirname `_A` and `a` instead of `A` and `a`

@@ -119,7 +119,7 @@ def train(alpha=5e-5):
                 writer.add_summary(summary, step)
                 print(("Step %4d, Test accuracy: %.4f" %
                        (step, test_accuracy)))
-                if test_accuracy > 0.9955 or step-origin_step > 1000:
+                if test_accuracy > 0.9955 or step-origin_step > 500:
                     if test_accuracy<= 0.9955:
                         print('you can re-format dataset and give a smaller alpha '
                               'to continue training')

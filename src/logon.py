@@ -7,9 +7,8 @@
 import time
 
 from selenium import webdriver
-import selenium
-import requests
-from PIL import Image, ImageEnhance
+
+from captcha.recognizer._recognize_p import start_recognize_daemon
 
 login_url = 'http://ecard.xidian.edu.cn/cardUserManager.do?method=checkLogin'
 index_url = 'http://ecard.xidian.edu.cn/index.jsp'
@@ -44,10 +43,11 @@ def refresh(driver):
 
 def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
     driver = webdriver.Firefox()
+    p = start_recognize_daemon()
     while True:
         load_logon_page(driver)
         time.sleep(asyn_time)
-        
+
         elem_cardid = driver.find_elements_by_id('code')[0]
         elem_cardid.clear()
         elem_cardid.send_keys(card_id)
@@ -59,13 +59,28 @@ def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
         elem_captcha_img = driver.find_element_by_id('myTab1_Content0').find_elements_by_tag_name('img')[0]
         elem_captcha_img.screenshot('captcha.png')
 
+        elem_captcha = driver.find_elements_by_id('cardCheckCode')[0]
+        elem_captcha.clear()
         #TODO inference here
+        p.send('captcha.png')
+        result = p.recv()
+        if result == '': # recognize failed
+            print(p.recv_err())
+        elem_captcha.send_keys(result)
+        time.sleep(2) #wait to look
+
         elem_login=driver.find_element_by_id('myTab1_Content0').find_elements_by_class_name('button_denglu')[0]
         elem_login.click()
 
-        if is_loggedin(driver):
-            return #TODO after login
-        else: #captcha error, continue
+        time.sleep(2)
+
+        try:
+            if is_loggedin(driver):
+                p.close()
+                return #TODO after login
+            else: #captcha error, continue
+                refresh(driver)
+        except:
             refresh(driver)
 
 
