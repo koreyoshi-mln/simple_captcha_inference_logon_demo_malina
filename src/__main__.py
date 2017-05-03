@@ -1,30 +1,23 @@
 # -*- coding:utf-8 -*-
 #!/usr/bin/env python3
 
+"""logon demo
+Usage:
+  logon <username> <password> [--asyn-time=<asyn-time>]
+  
+Options
+  --asyn-time=<asyn-time>  Firefox asyn time (s) [default: 0.5]
 """
+from docopt import docopt
 
-"""
-import os
-import sys
-from subprocess import Popen, PIPE
-CLIENT_FILE = 'captcha_recognise_gui_controller.py'
-def main():
-    popen = None
-    def start_gui(*args):
-        p = Popen([sys.executable, CLIENT_FILE, *args], stdin=PIPE, stdout=PIPE)
-        #print('client pid ',launcher.popen.pid)
-        return p
+from logon import selenium_logon
+def cli():
+    arguments = docopt(__doc__)
 
-    while True:
-        if os.path.exists('.url'):
-            with open('.url') as fr:
-                url=fr.readline()
-            print(url)
-            popen = start_gui(url)
-        else:
-            popen = start_gui()
-
-        popen.wait()
+    username = arguments['<username>']
+    passwd = arguments['<password>']
+    asyn_time = arguments['--asyn-time']
+    selenium_logon(username, passwd)
 
 if __name__ == '__main__':
-   main()
+    cli()

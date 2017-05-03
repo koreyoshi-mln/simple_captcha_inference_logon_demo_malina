@@ -19,9 +19,8 @@ def cli():
 
     captcha_list = []
     for fn in os.listdir(path):
-        name, ext = os.path.splitext(fn)
-        if ext == '.jpg' and len(name) == 4:  # assure that is test image file
-            captcha_list.append(os.path.join(path, fn))
+        #name, ext = os.path.splitext(fn)
+        captcha_list.append(os.path.join(path, fn))
 
     result_list = recognize(captcha_list)
     correct = 0

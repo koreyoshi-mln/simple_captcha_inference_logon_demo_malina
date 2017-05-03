@@ -9,6 +9,7 @@ from functools import partial
 
 import cv2
 import numpy as np
+from PIL import Image, ImageEnhance
 
 
 # In[2]:
@@ -72,8 +73,18 @@ def vertical_project(im, threshold=0):
 
 # In[5]:
 
-def load_gray_image(im_path, threshold_low=140):
+def format_screen(im):
+    img = Image.fromarray(im)
+    img_enh=ImageEnhance.Sharpness(img).enhance(3)
+    img_enh=img_enh.resize((70, 20), Image.ANTIALIAS)
+    im = np.asarray(img_enh, dtype=np.float32)
+
+    return im
+
+def load_gray_image(im_path):
     im = cv2.imread(im_path)
+    if im.shape != (20, 70):
+        im = format_screen(im)
     im = im[1:-1, 1:-1]
     im_gray=cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     
@@ -184,7 +195,6 @@ def split_letters(im_path):
     _, im_b = cv2.threshold(im_gray, 140, 255, cv2.THRESH_BINARY)
     im_b = clear_noise(im_b, threshold=255)
     letters = [format_letter(letter) for letter in _split_letters(im_b)]
-    
     #print(letters)
     return letters
 
@@ -194,14 +204,17 @@ def split_letters(im_path):
 def split_test(input_dir='captchas', out_dir='dataset'):
     for fn in os.listdir(input_dir):
         bare_fn, ext = os.path.splitext(fn)
-        if ext == '.jpg':
-            im_path = os.path.join(input_dir, fn)
-            letters=split_letters(im_path)
-            for i,letter in enumerate(letters):
-                fn2 = bare_fn + '_%d'%i + ext
-                
-                cv2.imwrite(os.path.join(out_dir, fn2), letter)
-                print('splited %s'%im_path)
+        im_path = os.path.join(input_dir, fn)
+        try:
+            letters = split_letters(im_path)
+        except Exception as ex:
+            print(ex, im_path)
+            continue
+        for i, letter in enumerate(letters):
+            fn2 = bare_fn + '_%d' % i + ext
+
+            cv2.imwrite(os.path.join(out_dir, fn2), letter)
+            print('splited %s' % im_path)
                 
 def cli():
     import sys
