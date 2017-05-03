@@ -1,4 +1,4 @@
-###**support**###
+## support
 
 ![](captcha.png)
 
@@ -6,7 +6,8 @@
 
 [.checkpoint](http://ootd0i1uv.bkt.clouddn.com/ecard_xidian_checkpoint.zip)
 
-###**requirement**###
+## requirement
+
 **1. geckodriver >= 0.16**
 
 **2. python3 (defined in requirements.txt)**
