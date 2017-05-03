@@ -1,7 +1,3 @@
-.checkpoint/
+training_set/*
 *.pickle
-training_set/
-removeCR.py
-logs/
-*.jpg
-*.png
+.checkpoint/*
