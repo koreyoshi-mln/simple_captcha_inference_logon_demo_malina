@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding:utf-8
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
-import sys
+from __future__ import print_function
+
 import os
+import sys
 from argparse import ArgumentParser
 
 try:
@@ -14,8 +15,8 @@ except ImportError:
 
 import tensorflow as tf
 
-trainer_dir =os.path.dirname(os.path.abspath(__file__))
-home_dir= os.path.dirname(trainer_dir)
+trainer_dir = os.path.dirname(os.path.abspath(__file__))
+home_dir = os.path.dirname(trainer_dir)
 sys.path.append(home_dir)
 
 from common.load_model_nn import load_model_nn
@@ -29,8 +30,9 @@ except NameError:
 
 formatted_dataset_path = os.path.join(trainer_dir, 'formatted_dataset.pickle')
 ckpt_dir = os.path.join(trainer_dir, '.checkpoint')
-#graph_log_dir = os.path.join(trainer_dir, 'logs')
+# graph_log_dir = os.path.join(trainer_dir, 'logs')
 graph_log_dir = ckpt_dir
+
 
 def train(alpha=5e-5):
     print("loading %s..." % formatted_dataset_path)
@@ -64,7 +66,6 @@ def train(alpha=5e-5):
     merged = model['merged']
     saver = model['saver']
     graph = model['graph']
-
 
     print("checkpoint saved dir: ", ckpt_dir)
 
@@ -119,8 +120,8 @@ def train(alpha=5e-5):
                 writer.add_summary(summary, step)
                 print(("Step %4d, Test accuracy: %.4f" %
                        (step, test_accuracy)))
-                if test_accuracy > 0.9955 or step-origin_step > 500:
-                    if test_accuracy<= 0.9955:
+                if test_accuracy > 0.9955 or step - origin_step > 500:
+                    if test_accuracy <= 0.9955:
                         print('you can re-format dataset and give a smaller alpha '
                               'to continue training')
                     else:
@@ -139,12 +140,8 @@ def train(alpha=5e-5):
                 )
                 writer.add_summary(summary, step)
 
-
-
             if step % 100 == 0:  # save the model every 100 step
                 save_model(step)
-
-
 
         print("Test accuracy: %g" %
               session.run(
@@ -156,16 +153,16 @@ def train(alpha=5e-5):
                   })
               )
 
-def cli():
 
+def cli():
     parser = ArgumentParser()
     parser.add_argument('-a', '--alpha', type=float, default='5e-5',
                         help='convergence rate for train default 5e-5')
 
     kwargs = parser.parse_args().__dict__
-    #print(kwargs)
+    # print(kwargs)
     train(**kwargs)
+
 
 if __name__ == '__main__':
     cli()
-

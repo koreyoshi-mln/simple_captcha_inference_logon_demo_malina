@@ -1,17 +1,17 @@
 # -*- coding:utf-8 -*-
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 
 """
 
 """
 import time
 
-from selenium import webdriver
-
 from captcha.recognizer._recognize_p import start_recognize_daemon
+from selenium import webdriver
 
 login_url = 'http://ecard.xidian.edu.cn/cardUserManager.do?method=checkLogin'
 index_url = 'http://ecard.xidian.edu.cn/index.jsp'
+
 
 def load_logon_page(driver):
     driver.get(index_url)
@@ -21,6 +21,7 @@ def load_logon_page(driver):
             elem_a.click()
             break
 
+
 def is_loggedin(driver):
     for elem_a in driver.find_elements_by_tag_name('a'):
         if '登录' in elem_a.text:
@@ -28,20 +29,23 @@ def is_loggedin(driver):
 
     return True
 
+
 def logout(driver):
-    elem_logout=None
+    elem_logout = None
     for elem in driver.find_elements_by_tag_name('a'):
         if elem.text.strip() == '退出':
-            elem_logout=elem
+            elem_logout = elem
             break
 
     elem_logout.click()
+
 
 def refresh(driver):
     driver.back()
     driver.refresh()
 
-def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
+
+def selenium_logon(card_id, card_passwd, asyn_time=0.5):
     driver = webdriver.Firefox()
     p = start_recognize_daemon()
     while True:
@@ -67,15 +71,15 @@ def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
 
         elem_captcha = driver.find_elements_by_id('cardCheckCode')[0]
         elem_captcha.clear()
-        #TODO inference here
+        # TODO inference here
         p.send('captcha.png')
         result = p.recv()
-        if result == '': # recognize failed
+        if result == '':  # recognize failed
             print(p.recv_err())
         elem_captcha.send_keys(result)
-        time.sleep(2) #wait to look
+        time.sleep(2)  # wait to look
 
-        elem_login=driver.find_element_by_id('myTab1_Content0').find_elements_by_class_name('button_denglu')[0]
+        elem_login = driver.find_element_by_id('myTab1_Content0').find_elements_by_class_name('button_denglu')[0]
         elem_login.click()
 
         time.sleep(2)
@@ -83,28 +87,8 @@ def selenium_logon(card_id, card_passwd, asyn_time = 0.5):
         try:
             if is_loggedin(driver):
                 p.close()
-                return #TODO after login
-            else: #captcha error, continue
+                return  # TODO after login
+            else:  # captcha error, continue
                 refresh(driver)
         except:
             refresh(driver)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

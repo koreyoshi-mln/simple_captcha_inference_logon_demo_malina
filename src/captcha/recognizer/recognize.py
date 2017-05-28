@@ -2,6 +2,7 @@
 # coding:utf-8
 
 from __future__ import print_function
+
 from _recognize_p import start_recognize_daemon
 
 
@@ -10,7 +11,7 @@ def recognize(captcha_path_set):
 
     result_set = []
     for captcha_path in captcha_path_set:
-        p.stdin.write(captcha_path.encode()+b'\n')
+        p.stdin.write(captcha_path.encode() + b'\n')
         try:
             p.stdin.flush()
         except OSError:

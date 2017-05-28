@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # coding:utf-8
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
+import io
 import os
 import sys
-import io
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -15,8 +16,8 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from PIL import Image
 
-trainer_dir =os.path.dirname(os.path.abspath(__file__))
-home_dir= os.path.dirname(trainer_dir)
+trainer_dir = os.path.dirname(os.path.abspath(__file__))
+home_dir = os.path.dirname(trainer_dir)
 sys.path.append(home_dir)
 from common.common import IMAGE_SIZE
 
@@ -31,8 +32,8 @@ def load_dataset():
     for label in os.listdir(base_dir):
         if label.upper() == "ERROR" or label == ".DS_Store":
             continue
-        if label.startswith('_'): # Windows case insensitive, exp:
-                                  # use dirname `_A` and `a` instead of `A` and `a`
+        if label.startswith('_'):  # Windows case insensitive, exp:
+            # use dirname `_A` and `a` instead of `A` and `a`
             label = label[1:]
 
         print("loading:", label, "index:", index)
@@ -66,12 +67,14 @@ def _format_dataset(dataset, labels, image_size, num_labels):
     labels = (np.arange(num_labels) == labels[:, None]).astype(np.float32)
     return dataset, labels
 
+
 DEFAULT_FORMATTED_DATATSET_PATH = os.path.join(trainer_dir, 'formatted_dataset.pickle')
 DEFAULT_LABEL_MAP_PATH = os.path.join(trainer_dir, 'label_map.pickle')
-def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
-                   label_dataset_path = DEFAULT_LABEL_MAP_PATH,
-                   log_file=io.StringIO()):
 
+
+def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
+                   label_dataset_path=DEFAULT_LABEL_MAP_PATH,
+                   log_file=io.StringIO()):
     dataset, labelset, label_map = load_dataset()
     print("randomizing the dataset...", file=log_file)
     dataset, labelset = randomize(dataset, labelset)
@@ -98,15 +101,14 @@ def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
     }
 
     with open(formatted_dataset_path, 'wb') as f:
-        pickle.dump(formatted_dataset, f, protocol=2) # for compatible with python27
+        pickle.dump(formatted_dataset, f, protocol=2)  # for compatible with python27
 
     label_map = formatted_dataset['label_map']
     with open(label_dataset_path, 'wb') as f2:
         pickle.dump(label_map, f2, protocol=2)
 
-
-    print("dataset has saved at %s"%formatted_dataset_path, file=log_file)
-    print("label_map has saved at %s"%label_dataset_path, file=log_file)
+    print("dataset has saved at %s" % formatted_dataset_path, file=log_file)
+    print("label_map has saved at %s" % label_dataset_path, file=log_file)
     print("load_model has finished", file=log_file)
 
 
@@ -117,6 +119,7 @@ def cli():
         format_dataset(formatted_dataset_path, sys.stdout)
     else:
         format_dataset(log_file=sys.stdout)
+
 
 if __name__ == '__main__':
     cli()

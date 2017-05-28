@@ -1,4 +1,1 @@
-training_set/*
-formatted_dataset.pickle
-.checkpoint/*
-.checkpoint.zip
+captchas/*

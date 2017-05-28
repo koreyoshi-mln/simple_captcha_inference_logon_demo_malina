@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
-import sys
 import os
+import sys
+
 from recognize import recognize
 
 recognize_dir = os.path.dirname(os.path.abspath(__file__))
 
-def cli():
 
+def cli():
     if len(sys.argv) > 1:
         path = sys.argv[1]
     else:
@@ -19,7 +20,7 @@ def cli():
 
     captcha_list = []
     for fn in os.listdir(path):
-        #name, ext = os.path.splitext(fn)
+        # name, ext = os.path.splitext(fn)
         captcha_list.append(os.path.join(path, fn))
 
     result_list = recognize(captcha_list)
@@ -34,8 +35,8 @@ def cli():
         else:
             print(False)
 
-    print('accuracy: %f' % (correct/len(captcha_list)))
+    print('accuracy: %f' % (correct / len(captcha_list)))
+
 
 if __name__ == '__main__':
     cli()
-

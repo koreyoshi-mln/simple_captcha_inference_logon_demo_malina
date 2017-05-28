@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 
 import os
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -21,6 +22,8 @@ except NameError:
 
 home_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 trainer_dir = os.path.join(home_dir, 'trainer')
+
+
 def load_label_map(pickle_dir=trainer_dir):
     label_map_pickle = os.path.join(pickle_dir, "label_map.pickle")
 

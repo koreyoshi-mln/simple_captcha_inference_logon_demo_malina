@@ -2,14 +2,12 @@
 # -*- coding:utf-8 -*-
 
 from __future__ import absolute_import
-from __future__ import print_function
 from __future__ import division
+from __future__ import print_function
 
 import tensorflow as tf
 
 from .common import IMAGE_SIZE, load_label_map, IMAGE_HEIGHT, IMAGE_WIDTH
-
-
 
 
 def weight_variable(shape):
@@ -101,7 +99,7 @@ def load_model_nn(alpha=5e-5):  # `cnn` up to now
                  'keep_prob': keep_prob,
                  'accuracy': accuracy,
                  'prediction': prediction,
-                 'merged':merged,
+                 'merged': merged,
                  'saver': saver,
                  'graph': graph
                  }
