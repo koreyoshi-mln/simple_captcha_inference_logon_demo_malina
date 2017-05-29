@@ -11,7 +11,7 @@ def recognize(captcha_path_set):
 
     result_set = []
     for captcha_path in captcha_path_set:
-        p.stdin.write(captcha_path.encode() + b'\n')
+        p.send(captcha_path)
         try:
             p.stdin.flush()
         except OSError:
@@ -20,13 +20,13 @@ def recognize(captcha_path_set):
             cracked = False
 
         if cracked:
+            print(p.recv_err())
             raise OSError('the recognize daemon process cracked up :(')
-        result = p.stdout.readline().strip().decode()
+        result = p.recv()
         result_set.append(result)
         # print("result:", result)
 
     p.stdin.write(b'$exit\n')
-    p.stdin.flush()
 
     p.kill()
 

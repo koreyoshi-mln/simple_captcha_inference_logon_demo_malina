@@ -19,8 +19,8 @@ import cv2
 
 home_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(home_dir)
-from common.common import load_label_map, find_model_ckpt, IMAGE_SIZE
-from common.load_model_nn import load_model_nn
+from common.common import load_label_map, find_model_ckpt, IMAGE_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT
+from common.load_model_nn import load_model_rnn
 from spliter.spliter import split_letters
 
 image_size = IMAGE_SIZE
@@ -39,7 +39,7 @@ def _fetch_stream(print_func, *args, **other_kwargs):
 def recognize_char_p():
     label_map = load_label_map()  # 加载label值对应的label
                                   # 比如0->0, 10->`a`
-    model = load_model_nn()  # 加载神经网络模型
+    model = load_model_rnn()  # 加载神经网络模型
 
     x = model['x']
     keep_prob = model['keep_prob']
@@ -88,16 +88,17 @@ def recognize_p():
     # print("recognize_p")
 
     label_map = load_label_map()
-    model = load_model_nn()
+    model = load_model_rnn()
 
     x = model['x']
     keep_prob = model['keep_prob']
     saver = model['saver']
     prediction = model['prediction']
-    graph = model['graph']
+
     model_ckpt_path, _ = find_model_ckpt()
-    with tf.Session(graph=graph) as session:
-        tf.global_variables_initializer().run()
+    init = tf.global_variables_initializer()
+    with tf.Session() as session:
+        session.run(init)
         saver.restore(session, model_ckpt_path)
 
         while True:
@@ -111,7 +112,7 @@ def recognize_p():
                 # 将完整的验证码图片进行处理，分割成标准的训练样本式的单个字符的列表
                 # 然后再将每个字符处理成特征向量
                 formatted_letters = split_letters(captcha_path)
-                formatted_letters = [letter.reshape(image_size) for letter in formatted_letters]
+                # formatted_letters = [letter.reshape(image_size) for letter in formatted_letters]
             except Exception as ex:
                 sys.stdout.write('\n')
                 err_msg = _fetch_stream(traceback.print_stack)

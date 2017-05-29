@@ -61,7 +61,7 @@ def randomize(dataset, labels):
     return shuffled_dataset, shuffled_labels
 
 
-def _format_dataset(dataset, labels, image_size, num_labels):
+def _format_dataset(dataset, labels, image_size, num_labels): # one hot pattern
     dataset = dataset.reshape((-1, image_size)).astype(np.float32)
     # Map 1 to [0.0, 1.0, 0.0 ...], 2 to [0.0, 0.0, 1.0 ...]
     labels = (np.arange(num_labels) == labels[:, None]).astype(np.float32)

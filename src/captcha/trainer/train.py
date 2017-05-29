@@ -19,8 +19,8 @@ trainer_dir = os.path.dirname(os.path.abspath(__file__))
 home_dir = os.path.dirname(trainer_dir)
 sys.path.append(home_dir)
 
-from common.load_model_nn import load_model_nn
-from common.common import find_model_ckpt
+from common.load_model_nn import load_model_rnn
+from common.common import find_model_ckpt, IMAGE_WIDTH, IMAGE_HEIGHT
 
 try:
     FileNotFoundError
@@ -28,6 +28,7 @@ except NameError:
     # py2
     FileNotFoundError = IOError
 
+nn_type = 'rnn'
 formatted_dataset_path = os.path.join(trainer_dir, 'formatted_dataset.pickle')
 ckpt_dir = os.path.join(trainer_dir, '.checkpoint')
 # graph_log_dir = os.path.join(trainer_dir, 'logs')
@@ -48,6 +49,10 @@ def train(alpha=5e-5):
         test_labels = save['test_labels']
         label_map = save['label_map']
 
+        if nn_type == 'rnn':
+            train_dataset = train_dataset.reshape((len(train_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
+            test_dataset = test_dataset.reshape((len(test_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
+
     num_labels = len(label_map)
 
     print("train_dataset:", train_dataset.shape)
@@ -56,16 +61,16 @@ def train(alpha=5e-5):
     print("test_labels:", test_labels.shape)
     print("num_labels:", num_labels)
 
-    model = load_model_nn(alpha)
+    model = load_model_rnn(alpha)
     x = model['x']
     y = model['y']
-    loss = model['loss']
+    cost = model['loss']
     optimizer = model['optimizer']
     accuracy = model['accuracy']
     keep_prob = model['keep_prob']
     merged = model['merged']
     saver = model['saver']
-    graph = model['graph']
+    #graph = model['graph']
 
     print("checkpoint saved dir: ", ckpt_dir)
 
@@ -73,22 +78,21 @@ def train(alpha=5e-5):
 
     def save_model(_step):
         saver.save(
-            session,
+            sess,
             os.path.join(ckpt_dir, 'weibo.cn-model.ckpt'),
             global_step=_step
         )
 
-    with tf.Session(graph=graph) as session:
-        writer = tf.summary.FileWriter(graph_log_dir, session.graph)
-        tf.global_variables_initializer().run()
-
-        step = 0
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        writer = tf.summary.FileWriter(graph_log_dir)
+        sess.run(init)
         try:
             model_ckpt_path, global_step = find_model_ckpt()  # try to continue ....
         except FileNotFoundError:
             print("Initialized")
         else:  # try continue to train
-            saver.restore(session, model_ckpt_path)
+            saver.restore(sess, model_ckpt_path)
             step = global_step
             print('found %s, step from %d' % (model_ckpt_path, step))
 
@@ -98,9 +102,9 @@ def train(alpha=5e-5):
             # Generate a minibatch.
             batch_data = train_dataset[offset:(offset + batch_size), :]
             batch_labels = train_labels[offset:(offset + batch_size), :]
-            # print(batch_data, batch_labels)
-            session.run(
-                [optimizer, loss],
+
+            sess.run(
+                [optimizer, cost],
                 feed_dict={
                     x: batch_data,
                     y: batch_labels,
@@ -108,8 +112,8 @@ def train(alpha=5e-5):
                 }
             )
             step += 1
-            if step % 50 == 0:
-                summary, test_accuracy = session.run(
+            if step % 20 == 0:  # Display and Test
+                summary, test_accuracy = sess.run(
                     [merged, accuracy],
                     feed_dict={
                         x: test_dataset,
@@ -120,7 +124,8 @@ def train(alpha=5e-5):
                 writer.add_summary(summary, step)
                 print(("Step %4d, Test accuracy: %.4f" %
                        (step, test_accuracy)))
-                if test_accuracy > 0.9955 or step - origin_step > 500:
+
+                if test_accuracy > 0.9955 or step - origin_step > 500:  # Test Whether you can exit
                     if test_accuracy <= 0.9955:
                         print('you can re-format dataset and give a smaller alpha '
                               'to continue training')
@@ -130,7 +135,7 @@ def train(alpha=5e-5):
                     break
 
             else:
-                summary, train_accuracy = session.run(
+                summary, train_accuracy = sess.run(
                     [merged, accuracy],
                     feed_dict={
                         x: batch_data,
@@ -144,7 +149,7 @@ def train(alpha=5e-5):
                 save_model(step)
 
         print("Test accuracy: %g" %
-              session.run(
+              sess.run(
                   accuracy,
                   feed_dict={
                       x: test_dataset,
