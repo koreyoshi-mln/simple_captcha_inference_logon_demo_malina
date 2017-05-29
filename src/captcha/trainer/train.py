@@ -19,8 +19,8 @@ trainer_dir = os.path.dirname(os.path.abspath(__file__))
 home_dir = os.path.dirname(trainer_dir)
 sys.path.append(home_dir)
 
-from common.load_model_nn import load_model_rnn
-from common.common import find_model_ckpt, IMAGE_WIDTH, IMAGE_HEIGHT
+import common.load_model_nn as load_nn
+from common.common import find_model_ckpt, IMAGE_WIDTH, IMAGE_HEIGHT, NNType
 
 try:
     FileNotFoundError
@@ -28,14 +28,10 @@ except NameError:
     # py2
     FileNotFoundError = IOError
 
-nn_type = 'rnn'
 formatted_dataset_path = os.path.join(trainer_dir, 'formatted_dataset.pickle')
-ckpt_dir = os.path.join(trainer_dir, '.checkpoint')
-# graph_log_dir = os.path.join(trainer_dir, 'logs')
-graph_log_dir = ckpt_dir
 
 
-def train(alpha=5e-5):
+def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
     print("loading %s..." % formatted_dataset_path)
     with open(formatted_dataset_path, 'rb') as f:
         import sys
@@ -49,7 +45,7 @@ def train(alpha=5e-5):
         test_labels = save['test_labels']
         label_map = save['label_map']
 
-        if nn_type == 'rnn':
+        if nn_type == NNType.rnn:
             train_dataset = train_dataset.reshape((len(train_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
             test_dataset = test_dataset.reshape((len(test_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
 
@@ -61,7 +57,11 @@ def train(alpha=5e-5):
     print("test_labels:", test_labels.shape)
     print("num_labels:", num_labels)
 
-    model = load_model_rnn(alpha)
+    if nn_type == NNType.cnn:
+        model = load_nn.load_model_cnn(alpha=alpha)
+    else:
+        model = load_nn.load_model_rnn(alpha=alpha)
+
     x = model['x']
     y = model['y']
     cost = model['loss']
@@ -72,31 +72,30 @@ def train(alpha=5e-5):
     saver = model['saver']
     #graph = model['graph']
 
-    print("checkpoint saved dir: ", ckpt_dir)
-
     batch_size = 64
-
-    def save_model(_step):
-        saver.save(
-            sess,
-            os.path.join(ckpt_dir, 'weibo.cn-model.ckpt'),
-            global_step=_step
-        )
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
-        writer = tf.summary.FileWriter(graph_log_dir)
         sess.run(init)
-        try:
-            model_ckpt_path, global_step = find_model_ckpt()  # try to continue ....
-        except FileNotFoundError:
+        model_ckpt_path, origin_step, ok = find_model_ckpt(nn_type=nn_type)  # try to continue ....
+        model_ckpt_dir = os.path.dirname(model_ckpt_path)
+        step = origin_step
+        if not ok:
             print("Initialized")
         else:  # try continue to train
             saver.restore(sess, model_ckpt_path)
-            step = global_step
             print('found %s, step from %d' % (model_ckpt_path, step))
 
-        origin_step = step
+        def save_model(_step):
+            saver.save(
+                sess,
+                os.path.join(model_ckpt_dir, 'model'),
+                global_step=_step
+            )
+
+        graph_log_dir = model_ckpt_dir
+        writer = tf.summary.FileWriter(graph_log_dir)
+
         while True:
             offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
             # Generate a minibatch.
@@ -112,27 +111,28 @@ def train(alpha=5e-5):
                 }
             )
             step += 1
-            if step % 20 == 0:  # Display and Test
-                summary, test_accuracy = sess.run(
-                    [merged, accuracy],
+            if step % 10 == 0:  # Display, Test and Save
+                summary, acc, loss = sess.run(
+                    [merged, accuracy, cost],
                     feed_dict={
-                        x: test_dataset,
-                        y: test_labels,
+                        x: batch_data,
+                        y: batch_labels,
                         keep_prob: 1.0
                     }
                 )
                 writer.add_summary(summary, step)
-                print(("Step %4d, Test accuracy: %.4f" %
-                       (step, test_accuracy)))
 
-                if test_accuracy > 0.9955 or step - origin_step > 500:  # Test Whether you can exit
-                    if test_accuracy <= 0.9955:
-                        print('you can re-format dataset and give a smaller alpha '
-                              'to continue training')
-                    else:
-                        print('training done.')
+                print("step %4d, accuracy: %.4f, loss: %.2f" % (step, acc, loss))
+
+                if acc > target_accuracy:  # Test Whether you can exit
+                    print('you can re-format dataset '
+                          'to continue training')
+                    print('training done.')
                     save_model(step)
                     break
+
+                if step % 100 == 0:  # save the model every 100 step
+                    save_model(step)
 
             else:
                 summary, train_accuracy = sess.run(
@@ -144,9 +144,6 @@ def train(alpha=5e-5):
                     }
                 )
                 writer.add_summary(summary, step)
-
-            if step % 100 == 0:  # save the model every 100 step
-                save_model(step)
 
         print("Test accuracy: %g" %
               sess.run(
@@ -164,7 +161,18 @@ def cli():
     parser.add_argument('-a', '--alpha', type=float, default='5e-5',
                         help='convergence rate for train default 5e-5')
 
+    parser.add_argument('-nn', '--nn-type',  default='cnn', choices=['cnn', 'rnn'],
+                        help='select neural network model type')
+
+    parser.add_argument('-acc', '--accuracy', dest='target_accuracy', type=float, default=0.9955,
+                        help='target accuracy, default 0.9955')
+
     kwargs = parser.parse_args().__dict__
+    if kwargs['nn_type'] == 'cnn':
+        kwargs['nn_type'] = NNType.cnn
+    elif kwargs['nn_type'] == 'rnn':
+        kwargs['nn_type'] = NNType.rnn
+
     # print(kwargs)
     train(**kwargs)
 

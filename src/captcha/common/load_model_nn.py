@@ -106,9 +106,6 @@ def load_model_rnn(alpha=5e-5):  # RNN with LSTM support
     from tensorflow.contrib import rnn
     # Parameters
     learning_rate = alpha  # alpha value
-    training_iters = 1e5  # max training iters, number of samples
-    batch_size = 128
-    display_step = 10
 
     # Network Parameters
     n_input = IMAGE_WIDTH  # MNIST data input

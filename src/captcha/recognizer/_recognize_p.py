@@ -19,8 +19,8 @@ import cv2
 
 home_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(home_dir)
-from common.common import load_label_map, find_model_ckpt, IMAGE_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT
-from common.load_model_nn import load_model_rnn
+from common.common import load_label_map, find_model_ckpt, IMAGE_SIZE, IMAGE_WIDTH, IMAGE_HEIGHT, NNType
+import common.load_model_nn as load_nn
 from spliter.spliter import split_letters
 
 image_size = IMAGE_SIZE
@@ -36,17 +36,21 @@ def _fetch_stream(print_func, *args, **other_kwargs):
     return content
 
 
-def recognize_char_p():
+def recognize_char_p(nn_type=NNType.cnn):
     label_map = load_label_map()  # 加载label值对应的label
                                   # 比如0->0, 10->`a`
-    model = load_model_rnn()  # 加载神经网络模型
+    # 加载神经网络模型
+    if nn_type == NNType.cnn:
+        model = load_nn.load_model_cnn()
+    else:
+        model = load_nn.load_model_rnn()
 
     x = model['x']
     keep_prob = model['keep_prob']
     saver = model['saver']
     prediction = model['prediction']
     graph = model['graph']
-    model_ckpt_path, _ = find_model_ckpt()  # 寻找断点(checkpoint)路径
+    model_ckpt_path, _, ok = find_model_ckpt(nn_type=nn_type)  # 寻找断点(checkpoint)路径
     print('All was well', file=sys.stderr)
     with tf.Session(graph=graph) as session:
         tf.global_variables_initializer().run()  # 各模型变量初始化
@@ -80,7 +84,7 @@ def recognize_char_p():
                 sys.stdout.write('\n')
 
 
-def recognize_p():
+def recognize_p(nn_type=NNType.cnn):
     """ 
     captcha_path
     $exit to exit
@@ -88,14 +92,17 @@ def recognize_p():
     # print("recognize_p")
 
     label_map = load_label_map()
-    model = load_model_rnn()
+    if nn_type == NNType.cnn:
+        model = load_nn.load_model_cnn()
+    else:
+        model = load_nn.load_model_rnn()
 
     x = model['x']
     keep_prob = model['keep_prob']
     saver = model['saver']
     prediction = model['prediction']
 
-    model_ckpt_path, _ = find_model_ckpt()
+    model_ckpt_path, _, ok = find_model_ckpt(nn_type=nn_type)
     init = tf.global_variables_initializer()
     with tf.Session() as session:
         session.run(init)
@@ -112,7 +119,8 @@ def recognize_p():
                 # 将完整的验证码图片进行处理，分割成标准的训练样本式的单个字符的列表
                 # 然后再将每个字符处理成特征向量
                 formatted_letters = split_letters(captcha_path)
-                # formatted_letters = [letter.reshape(image_size) for letter in formatted_letters]
+                if nn_type == NNType.cnn:
+                    formatted_letters = [letter.reshape(image_size) for letter in formatted_letters]
             except Exception as ex:
                 sys.stdout.write('\n')
                 err_msg = _fetch_stream(traceback.print_stack)
@@ -229,14 +237,18 @@ def _close_recognize_process():
         __p_recognize.kill()
 
 
-def start_recognize_char_daemon():  # singleton include recognize_char because of saver.restore
+def start_recognize_char_daemon(nn_type=NNType.cnn):  # singleton include recognize_char because of saver.restore
     global __p_recognize
     if __p_recognize is not None and __p_recognize.poll() is None:
         raise OSError('the checkpoint is used by another reconize process')
     else:
-        model_ckpt_path, _ = find_model_ckpt()
+        model_ckpt_path, _ = find_model_ckpt(nn_type=nn_type)[:2]
         print('load check-point %s' % model_ckpt_path)
-        p = Popen([sys.executable, __file__, 'recognize_char'],
+        if nn_type == NNType.cnn:
+            nn_type_s = 'cnn'
+        else:
+            nn_type_s = 'rnn'
+        p = Popen([sys.executable, __file__, 'recognize_char', '-nn', nn_type_s],
                   bufsize=102400,
                   stdin=PIPE, stdout=PIPE, stderr=PIPE)
         # p.stdin.encoding = 'utf8'  # so we get `str` instead of `bytes` in p
@@ -245,14 +257,19 @@ def start_recognize_char_daemon():  # singleton include recognize_char because o
         return p
 
 
-def start_recognize_daemon():  # singleton
+def start_recognize_daemon(nn_type=NNType.cnn):  # singleton
     global __p_recognize
     if __p_recognize is not None and __p_recognize.poll() is None:
         raise OSError('the checkpoint is used by another reconize process')
     else:
-        model_ckpt_path, _ = find_model_ckpt()
+        model_ckpt_path, _ = find_model_ckpt(nn_type=nn_type)[:2]
         print('load check-point %s' % model_ckpt_path)
-        p = Popen([sys.executable, __file__],
+        if nn_type == NNType.cnn:
+            nn_type_s = 'cnn'
+        else:
+            nn_type_s = 'rnn'
+
+        p = Popen([sys.executable, __file__, 'recognize', '-nn', nn_type_s],
                   bufsize=102400,
                   stdin=PIPE, stdout=PIPE, stderr=PIPE)
         # p.stdin.encoding = 'utf8'  # so we get `str` instead of `bytes` in p
@@ -262,14 +279,24 @@ def start_recognize_daemon():  # singleton
 
 
 def cli():
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument('recognize_type', choices=['recognize_char', 'recognize'],
+                        help='recognize type')
+
+    parser.add_argument('-nn', '--nn-type', default='cnn', choices=['cnn', 'rnn'],
+                        help='select neural network model type')
+    kwargs = parser.parse_args().__dict__
+    if kwargs['nn_type'] == 'cnn':
+        nn_type = NNType.cnn
+    elif kwargs['nn_type'] == 'rnn':
+        nn_type = NNType.rnn
     # print(sys.argv)
-    if len(sys.argv) == 1:
-        recognize_p()
-    elif len(sys.argv) == 2:
-        if sys.argv[1] == 'recognize_char':
-            recognize_char_p()
-        elif sys.argv[1] == 'recognize':
-            recognize_p()
+
+    if kwargs['recognize_type'] == 'recognize_char':
+        recognize_char_p(nn_type=nn_type)
+    else:
+        recognize_p(nn_type=nn_type)
 
 
 if __name__ == '__main__':

@@ -8,22 +8,37 @@ import os
 import sys
 
 from recognize import recognize
+home_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(home_dir)
+from common.common import NNType
+
 
 recognize_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def cli():
-    if len(sys.argv) > 1:
-        path = sys.argv[1]
-    else:
-        path = os.path.join(recognize_dir, 'test_set')
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+
+    parser.add_argument('-p', '--path', default='test_set',
+                        help='test set path')
+    parser.add_argument('-nn', '--nn-type',  default='cnn', choices=['cnn', 'rnn'],
+                        help='select neural network model type')
+
+    kwargs = parser.parse_args().__dict__
+    if kwargs['nn_type'] == 'cnn':
+        nn_type = NNType.cnn
+    elif kwargs['nn_type'] == 'rnn':
+        nn_type = NNType.rnn
+
+    path = kwargs['path']
 
     captcha_list = []
     for fn in os.listdir(path):
         # name, ext = os.path.splitext(fn)
         captcha_list.append(os.path.join(path, fn))
 
-    result_list = recognize(captcha_list)
+    result_list = recognize(captcha_list, nn_type=nn_type)
     correct = 0
     for path, result in zip(captcha_list, result_list):
         label = os.path.splitext(os.path.basename(path))[0][:4]
