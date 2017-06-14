@@ -30,16 +30,16 @@ def load_model_cnn(alpha=5e-5):  # `cnn` up to now
     num_labels = len(load_label_map())
     x = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE])
 
-    x_image = tf.reshape(x, shape=[-1, IMAGE_WIDTH, IMAGE_HEIGHT, 1])
+    x_image = tf.reshape(x, shape=[-1, IMAGE_WIDTH, IMAGE_HEIGHT, 1])  # input layer
 
     # First Convolutional Layer
-    conv_layer1_weight = weight_variable([5, 5, 1, 32])
+    conv_layer1_weight = weight_variable([5, 5, 1, 32])  # kernel_size 5x5
     conv_layer1_bias = bias_variable([32])
     pool_layer1 = max_pool_2x2(
         tf.nn.relu(
             conv2d(x_image, conv_layer1_weight) + conv_layer1_bias
         )
-    )
+    )  # poll_layer1 50% reduction of x_image in_width,in_height
 
     # Second Convolutional Layer
     conv_layer2_weight = weight_variable([5, 5, 32, 64])
@@ -48,7 +48,7 @@ def load_model_cnn(alpha=5e-5):  # `cnn` up to now
         tf.nn.relu(
             conv2d(pool_layer1, conv_layer2_weight) + conv_layer2_bias
         )
-    )
+    )  # poll_layer2 50% reduction of pool_layer1 in_width,in_height
 
     # Fully Connected Layer
     fc_layer_weight = weight_variable([IMAGE_HEIGHT // 4 * IMAGE_WIDTH // 4 * 64, 1024])

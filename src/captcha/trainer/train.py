@@ -21,6 +21,7 @@ sys.path.append(home_dir)
 
 import common.load_model_nn as load_nn
 from common.common import find_model_ckpt, IMAGE_WIDTH, IMAGE_HEIGHT, NNType
+from dataset import DataSet
 
 try:
     FileNotFoundError
@@ -39,21 +40,21 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
             save = pickle.load(f, encoding='latin1')
         else:
             save = pickle.load(f)
-        train_dataset = save['train_dataset']
+        train_data = save['train_data']
         train_labels = save['train_labels']
-        test_dataset = save['test_dataset']
+        test_data = save['test_data']
         test_labels = save['test_labels']
         label_map = save['label_map']
 
         if nn_type == NNType.rnn:
-            train_dataset = train_dataset.reshape((len(train_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
-            test_dataset = test_dataset.reshape((len(test_dataset), IMAGE_HEIGHT, IMAGE_WIDTH))
+            train_data = train_data.reshape((len(train_data), IMAGE_HEIGHT, IMAGE_WIDTH))
+            test_data = test_data.reshape((len(test_data), IMAGE_HEIGHT, IMAGE_WIDTH))
 
     num_labels = len(label_map)
 
-    print("train_dataset:", train_dataset.shape)
+    print("train_data:", train_data.shape)
     print("train_labels:", train_labels.shape)
-    print("test_dataset:", test_dataset.shape)
+    print("test_data:", test_data.shape)
     print("test_labels:", test_labels.shape)
     print("num_labels:", num_labels)
 
@@ -96,12 +97,10 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
         graph_log_dir = model_ckpt_dir
         writer = tf.summary.FileWriter(graph_log_dir)
 
+        train_dataset = DataSet(images=train_data, labels=train_labels)
         while True:
-            offset = (step * batch_size) % (train_labels.shape[0] - batch_size)
-            # Generate a minibatch.
-            batch_data = train_dataset[offset:(offset + batch_size), :]
-            batch_labels = train_labels[offset:(offset + batch_size), :]
-
+            batch_data, batch_labels = train_dataset.next_batch(batch_size)
+            '''
             sess.run(
                 [optimizer, cost],
                 feed_dict={
@@ -109,51 +108,37 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
                     y: batch_labels,
                     keep_prob: 0.5
                 }
+            )'''
+            summary, acc_train, loss, _ = sess.run(
+                [merged, accuracy, cost, optimizer],
+                feed_dict={
+                    x: batch_data,
+                    y: batch_labels,
+                    keep_prob: 0.5
+                }
             )
             step += 1
+            writer.add_summary(summary, step)
+
             if step % 10 == 0:  # Display, Test and Save
-                summary, acc, loss = sess.run(
-                    [merged, accuracy, cost],
-                    feed_dict={
-                        x: batch_data,
-                        y: batch_labels,
-                        keep_prob: 1.0
-                    }
-                )
-                writer.add_summary(summary, step)
 
-                print("step %4d, accuracy: %.4f, loss: %.2f" % (step, acc, loss))
+                acc_test = sess.run(
+                      accuracy,
+                      feed_dict={
+                          x: test_data,
+                          y: test_labels,
+                          keep_prob: 1.0
+                      })
+                print("step %4d, train_accuracy: %.4f, loss: %.4f test_accuracy: %.4f" %
+                      (step, acc_train, loss, acc_test))
 
-                if acc > target_accuracy:  # Test Whether you can exit
-                    print('you can re-format dataset '
-                          'to continue training')
+                if acc_test > target_accuracy:  # Test Whether you can exit
                     print('training done.')
                     save_model(step)
                     break
 
                 if step % 100 == 0:  # save the model every 100 step
                     save_model(step)
-
-            else:
-                summary, train_accuracy = sess.run(
-                    [merged, accuracy],
-                    feed_dict={
-                        x: batch_data,
-                        y: batch_labels,
-                        keep_prob: 1.0
-                    }
-                )
-                writer.add_summary(summary, step)
-
-        print("Test accuracy: %g" %
-              sess.run(
-                  accuracy,
-                  feed_dict={
-                      x: test_dataset,
-                      y: test_labels,
-                      keep_prob: 1.0
-                  })
-              )
 
 
 def cli():

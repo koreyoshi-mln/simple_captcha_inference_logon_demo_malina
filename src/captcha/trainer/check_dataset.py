@@ -35,11 +35,11 @@ if __name__ == '__main__':
             db = pickle.load(f, encoding='latin1')
         else:
             db = pickle.load(f)
-        train_dataset = db['train_dataset']
+        train_data = db['train_data']
         train_labels = db['train_labels']
-        test_dataset = db['test_dataset']
+        test_data = db['test_data']
         test_labels = db['test_labels']
         label_map = db['label_map']
 
     # check if the image is corresponding to it's label
-    check_dataset(train_dataset, train_labels, label_map, 0)
+    check_dataset(train_data, train_labels, label_map, 0)

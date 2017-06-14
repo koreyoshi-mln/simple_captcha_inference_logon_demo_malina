@@ -54,13 +54,6 @@ def load_dataset():
     return np.array(dataset), np.array(labelset), label_map
 
 
-def randomize(dataset, labels):
-    permutation = np.random.permutation(labels.shape[0])
-    shuffled_dataset = dataset[permutation, :, :]
-    shuffled_labels = labels[permutation]
-    return shuffled_dataset, shuffled_labels
-
-
 def _format_dataset(dataset, labels, image_size, num_labels): # one hot pattern
     dataset = dataset.reshape((-1, image_size)).astype(np.float32)
     # Map 1 to [0.0, 1.0, 0.0 ...], 2 to [0.0, 0.0, 1.0 ...]
@@ -77,25 +70,24 @@ def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
                    log_file=io.StringIO()):
     dataset, labelset, label_map = load_dataset()
     print("randomizing the dataset...", file=log_file)
-    dataset, labelset = randomize(dataset, labelset)
 
     print("train_test_split the dataset...", file=log_file)
-    train_dataset, test_dataset, train_labels, test_labels = train_test_split(dataset, labelset)
+    train_data, test_data, train_labels, test_labels = train_test_split(dataset, labelset)
 
     print("reformating the dataset...", file=log_file)
-    train_dataset, train_labels = _format_dataset(train_dataset, train_labels, IMAGE_SIZE, len(label_map))
-    test_dataset, test_labels = _format_dataset(test_dataset, test_labels, IMAGE_SIZE, len(label_map))
-    print("train_dataset:", train_dataset.shape, file=log_file)
+    train_data, train_labels = _format_dataset(train_data, train_labels, IMAGE_SIZE, len(label_map))
+    test_data, test_labels = _format_dataset(test_data, test_labels, IMAGE_SIZE, len(label_map))
+    print("train_data:", train_data.shape, file=log_file)
     print("train_labels:", train_labels.shape, file=log_file)
-    print("test_dataset:", test_dataset.shape, file=log_file)
+    print("test_data:", test_data.shape, file=log_file)
     print("test_labels:", test_labels.shape, file=log_file)
 
     print("pickling the dataset...", file=log_file)
 
     formatted_dataset = {
-        'train_dataset': train_dataset,
+        'train_data': train_data,
         'train_labels': train_labels,
-        'test_dataset': test_dataset,
+        'test_data': test_data,
         'test_labels': test_labels,
         'label_map': label_map
     }
