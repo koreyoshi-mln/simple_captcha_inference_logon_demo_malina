@@ -13,7 +13,7 @@ class DataSet(object):
         Used for `next_batch`
     """
 
-    def __init__(self, images, labels, dtype=float32):
+    def __init__(self, images, labels, label_map=None, dtype=float32):
         """Construct a DataSet.
          `dtype` can be either
         `uint8` to leave the input as `[0, 255]`, or `float32` to rescale into
@@ -28,13 +28,9 @@ class DataSet(object):
             'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
         self._num_examples = images.shape[0]
 
-        if dtype == float32:
-            # Convert from [0, 255] -> [0.0, 1.0].
-            images = images.astype(float32)
-            images = np.multiply(images, 1.0 / 255.0)
-
         self._images = images
         self._labels = labels
+        self._label_map = label_map
         self._epochs_completed = 0
         self._index_in_epoch = 0
 
@@ -45,6 +41,13 @@ class DataSet(object):
     @property
     def labels(self):
         return self._labels
+
+    @property
+    def label_map(self):
+        if self._label_map is None:
+            raise NameError('property `label_map` is not defined')
+        else:
+            return self._label_map
 
     @property
     def num_examples(self):

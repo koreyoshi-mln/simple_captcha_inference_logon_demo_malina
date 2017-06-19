@@ -20,7 +20,7 @@ def cli():
     from argparse import ArgumentParser
     parser = ArgumentParser()
 
-    parser.add_argument('-p', '--path', default='test_set',
+    parser.add_argument('-p', '--path', default=os.path.join(recognize_dir, 'test_set'),
                         help='test set path')
     parser.add_argument('-nn', '--nn-type',  default='cnn', choices=['cnn', 'rnn'],
                         help='select neural network model type')

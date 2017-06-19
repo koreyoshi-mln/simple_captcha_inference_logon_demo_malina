@@ -20,6 +20,7 @@ trainer_dir = os.path.dirname(os.path.abspath(__file__))
 home_dir = os.path.dirname(trainer_dir)
 sys.path.append(home_dir)
 from common.common import IMAGE_SIZE
+from dataset import DataSet
 
 
 def load_dataset():
@@ -61,18 +62,17 @@ def _format_dataset(dataset, labels, image_size, num_labels): # one hot pattern
     return dataset, labels
 
 
-DEFAULT_FORMATTED_DATATSET_PATH = os.path.join(trainer_dir, 'formatted_dataset.pickle')
-DEFAULT_LABEL_MAP_PATH = os.path.join(trainer_dir, 'label_map.pickle')
+DEFAULT_FORMATTED_DATATSET_DIR = trainer_dir
 
 
-def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
-                   label_dataset_path=DEFAULT_LABEL_MAP_PATH,
+def format_dataset(formatted_dataset_dir=DEFAULT_FORMATTED_DATATSET_DIR,
                    log_file=io.StringIO()):
-    dataset, labelset, label_map = load_dataset()
+
+    dataset, labels, label_map = load_dataset()
     print("randomizing the dataset...", file=log_file)
 
     print("train_test_split the dataset...", file=log_file)
-    train_data, test_data, train_labels, test_labels = train_test_split(dataset, labelset)
+    train_data, test_data, train_labels, test_labels = train_test_split(dataset, labels)
 
     print("reformating the dataset...", file=log_file)
     train_data, train_labels = _format_dataset(train_data, train_labels, IMAGE_SIZE, len(label_map))
@@ -84,31 +84,29 @@ def format_dataset(formatted_dataset_path=DEFAULT_FORMATTED_DATATSET_PATH,
 
     print("pickling the dataset...", file=log_file)
 
-    formatted_dataset = {
-        'train_data': train_data,
-        'train_labels': train_labels,
-        'test_data': test_data,
-        'test_labels': test_labels,
-        'label_map': label_map
-    }
+    formatted_train_dataset_path = os.path.join(formatted_dataset_dir, 'train_dataset.pickle')
+    train_dataset = DataSet(train_data, train_labels, label_map)
+    with open(formatted_train_dataset_path, 'wb') as f:
+        pickle.dump(train_dataset, f, protocol=2)  # for compatible with python27
 
-    with open(formatted_dataset_path, 'wb') as f:
-        pickle.dump(formatted_dataset, f, protocol=2)  # for compatible with python27
+    formatted_test_dataset_path = os.path.join(formatted_dataset_dir, 'test_dataset.pickle')
+    test_dataset = DataSet(test_data, test_labels, label_map)
+    with open(formatted_test_dataset_path, 'wb') as f:
+        pickle.dump(test_dataset, f, protocol=2)
 
-    label_map = formatted_dataset['label_map']
-    with open(label_dataset_path, 'wb') as f2:
+    label_map_path = os.path.join(formatted_dataset_dir, 'label_map.pickle')
+    with open(label_map_path, 'wb') as f2:
         pickle.dump(label_map, f2, protocol=2)
 
-    print("dataset has saved at %s" % formatted_dataset_path, file=log_file)
-    print("label_map has saved at %s" % label_dataset_path, file=log_file)
+    print("dataset has saved at %s" % formatted_dataset_dir, file=log_file)
     print("load_model has finished", file=log_file)
 
 
 def cli():
     import sys
     if len(sys.argv) > 1:
-        formatted_dataset_path = sys.argv[1]
-        format_dataset(formatted_dataset_path, sys.stdout)
+        formatted_dataset_dir = sys.argv[1]
+        format_dataset(formatted_dataset_dir, sys.stdout)
     else:
         format_dataset(log_file=sys.stdout)
 

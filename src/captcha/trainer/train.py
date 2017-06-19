@@ -29,30 +29,42 @@ except NameError:
     # py2
     FileNotFoundError = IOError
 
-formatted_dataset_path = os.path.join(trainer_dir, 'formatted_dataset.pickle')
+formatted_dataset_dir = trainer_dir
 
 
 def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
-    print("loading %s..." % formatted_dataset_path)
-    with open(formatted_dataset_path, 'rb') as f:
-        import sys
-        if sys.version_info.major == 3:
-            save = pickle.load(f, encoding='latin1')
-        else:
-            save = pickle.load(f)
-        train_data = save['train_data']
-        train_labels = save['train_labels']
-        test_data = save['test_data']
-        test_labels = save['test_labels']
-        label_map = save['label_map']
 
-        if nn_type == NNType.rnn:
-            train_data = train_data.reshape((len(train_data), IMAGE_HEIGHT, IMAGE_WIDTH))
-            test_data = test_data.reshape((len(test_data), IMAGE_HEIGHT, IMAGE_WIDTH))
+    label_map_path = os.path.join(formatted_dataset_dir, 'label_map.pickle')
+    formatted_train_dataset_path = os.path.join(formatted_dataset_dir, 'train_dataset.pickle')
+    formatted_test_dataset_path = os.path.join(formatted_dataset_dir, 'test_dataset.pickle')
+
+    def _compat_pickle_load(path):
+        with open(path, 'rb') as f:
+            import sys
+            if sys.version_info.major == 3:
+                obj = pickle.load(f, encoding='latin1')
+            else:
+                obj = pickle.load(f)
+
+        return obj
+
+    print("loading %s" % label_map_path)
+    label_map = _compat_pickle_load(label_map_path)
+
+    print("load %s" % formatted_train_dataset_path)
+    train_dataset = _compat_pickle_load(formatted_train_dataset_path)
+    train_labels = train_dataset.labels
+
+    print("load %s" % formatted_test_dataset_path)
+    test_dataset = _compat_pickle_load(formatted_test_dataset_path)
+    test_data, test_labels = test_dataset.images, test_dataset.labels
+
+    if nn_type == NNType.rnn:
+        test_data = test_data.reshape((len(test_data), IMAGE_HEIGHT, IMAGE_WIDTH))
 
     num_labels = len(label_map)
 
-    print("train_data:", train_data.shape)
+    print("train_data:", train_dataset.images.shape)
     print("train_labels:", train_labels.shape)
     print("test_data:", test_data.shape)
     print("test_labels:", test_labels.shape)
@@ -73,7 +85,7 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
     saver = model['saver']
     #graph = model['graph']
 
-    batch_size = 64
+    batch_size = 128
 
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
@@ -93,35 +105,27 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
                 os.path.join(model_ckpt_dir, 'model'),
                 global_step=_step
             )
+            with open(formatted_train_dataset_path, 'wb') as f:
+                pickle.dump(train_dataset, f, protocol=2)
 
         graph_log_dir = model_ckpt_dir
         writer = tf.summary.FileWriter(graph_log_dir)
 
-        train_dataset = DataSet(images=train_data, labels=train_labels)
         while True:
             batch_data, batch_labels = train_dataset.next_batch(batch_size)
-            '''
-            sess.run(
-                [optimizer, cost],
-                feed_dict={
-                    x: batch_data,
-                    y: batch_labels,
-                    keep_prob: 0.5
-                }
-            )'''
-            summary, acc_train, loss, _ = sess.run(
-                [merged, accuracy, cost, optimizer],
-                feed_dict={
-                    x: batch_data,
-                    y: batch_labels,
-                    keep_prob: 0.5
-                }
-            )
-            step += 1
-            writer.add_summary(summary, step)
+            if nn_type == NNType.rnn:
+                batch_data = batch_data.reshape((len(batch_data), IMAGE_HEIGHT, IMAGE_WIDTH))
 
             if step % 10 == 0:  # Display, Test and Save
 
+                summary, acc_train, loss, _ = sess.run(
+                    [merged, accuracy, cost, optimizer],
+                    feed_dict={
+                        x: batch_data,
+                        y: batch_labels,
+                        keep_prob: 0.5
+                    }
+                )
                 acc_test = sess.run(
                       accuracy,
                       feed_dict={
@@ -129,16 +133,33 @@ def train(alpha=5e-5, nn_type=NNType.cnn, target_accuracy=0.9955):
                           y: test_labels,
                           keep_prob: 1.0
                       })
+
+                writer.add_summary(summary, step)
                 print("step %4d, train_accuracy: %.4f, loss: %.4f test_accuracy: %.4f" %
                       (step, acc_train, loss, acc_test))
 
-                if acc_test > target_accuracy:  # Test Whether you can exit
+                # Test Whether you can exit
+                if acc_test > target_accuracy or loss < 0.002:
                     print('training done.')
                     save_model(step)
                     break
 
                 if step % 100 == 0:  # save the model every 100 step
                     save_model(step)
+
+            else:
+                loss, _ = sess.run(
+                    [cost, optimizer],
+                    feed_dict={
+                        x: batch_data,
+                        y: batch_labels,
+                        keep_prob: 0.5
+                    }
+                )
+
+            step += 1
+
+
 
 
 def cli():
